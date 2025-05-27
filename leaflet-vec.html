@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.vectorgrid@latest/dist/Leaflet.VectorGrid.bundled.js"></script>
+    <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
+    <style>
+        .label {
+            text-wrap: nowrap;
+            padding: 0px 2px;
+            margin: 0; 
+            font-size: 15px;
+            position: absolute;
+            background-color: white;
+        }
+
+        .divicon .bar {
+            position: absolute;
+            transform-origin: top left;
+            height: 1px;
+            background-color: black;
+        }
+        .divicon {
+            position: absolute;
+        }
+        .divicon .label {
+            background-color: white;
+            border: 1px solid #ffffff00;
+        }
+        .divicon:hover .label {
+            border: 1px solid greenyellow;
+        }
+        .divicon:hover .bar {
+            background-color: greenyellow;
+        }
+        .lv1 .label {
+            /*border: 1px solid black;*/
+        }
+        .lv2 .label {
+            border: 1px solid black;
+            background-color: yellow;
+        }
+        .lv3 .label {
+            border: 1px solid black;
+            background-color: orange;
+        }
+        .lv4  .label {
+            border: 1px solid black;
+            background-color: red;
+            color: white;
+        }
+        .lv5  .label {
+            border: 1px solid black;
+            background-color: purple;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>  
+ 
+    <body> 
+        <div style="position: relative; width: 1220px; height: 800px; border: 1px solid black;padding: 0; margin:0;">
+            <div id="map1" style="position:absolute;top:0;left:0;width: 100%; height: 100%;background-color: white;margin: 0;padding: 0;"></div>
+            <div id="map2" style="position:absolute;top:0;left:0;width: 400px; height: 300px;border: 1px solid black;background-color: white;margin: 0;padding: 0;"></div>
+            <div id="map3" style="position:absolute;right:0; bottom:0; width: 300px; height: 500px; border: 1px solid black;background-color: white;margin: 0;padding: 0;"></div>
+        </div>
+        
+        <script>
+            // メイン日本列島
+            let map1 = L.map("map1", {
+                zoom: 6,
+                zoomControl: false,
+                center: [38.6, 138.7],
+                rotate: true,
+                rotateControl: false,
+                bearing: 16,
+                attributionControl: false,
+            });
+            // 南西諸島
+            let map2 = L.map("map2", {
+                zoom: 6,
+                zoomControl: false,
+                center: [26.21, 126.76],
+                rotate: false,
+                rotateControl: false,
+                bearing: 0,
+                attributionControl: false,
+            });
+            // 小笠原諸島
+            let map3 = L.map("map3", {
+                zoom: 6,
+                zoomControl: false,
+                center: [27.51, 140.76],
+                rotate: false,
+                rotateControl: false, 
+                bearing: 0,
+                attributionControl: false,
+            });
+            // 共通の描画設定
+            let vectorTileLayerStyles = {
+                // 沿岸の線
+                "coastline": {
+                    color: "#333",
+                    weight: 1,
+                },
+                // 境界 ZL>=6から県境
+                "boundary": {
+                    color: "#999",
+                    weight: 1,
+                },
+                "contour": [],
+                "building": [],
+                "road": [],
+                "railway": [],
+                "searoute": [],
+                "transl": [],
+                "transp": [],
+                "wstructurea":[],
+                "waterarea": [],
+                "river": [],
+                "lake": [],
+                "landforma": [],
+                "landforml": [],
+                "landformp": [],
+                "structurea": [],
+                "structurel": [],
+                "elevation": [],
+                "label": [],
+                "symbol": [],
+            };
+
+            L.vectorGrid.protobuf("https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf", {
+                attribution: false,
+                rendererFactory: L.canvas.tile,
+                vectorTileLayerStyles,
+            }).addTo(map1);
+            
+            L.vectorGrid.protobuf("https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf", {
+                attribution: false, // "<a href='https://github.com/gsi-cyberjapan/gsimaps-vector-experiment' target='_blank'>地理院地図Vector（仮称）提供実験</a>",
+                rendererFactory: L.canvas.tile,
+                vectorTileLayerStyles,
+            }).addTo(map2);
+
+            L.polyline([[20, 126],[40, 126]], {color: "black", weight: 0.5,}).addTo(map2);
+            L.polyline([[28, 120],[28, 135]], {color: "black", weight: 0.5, }).addTo(map2);
+            
+            L.vectorGrid.protobuf("https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf", {
+                attribution: false, // "<a href='https://github.com/gsi-cyberjapan/gsimaps-vector-experiment' target='_blank'>地理院地図Vector（仮称）提供実験</a>",
+                rendererFactory: L.canvas.tile,
+                vectorTileLayerStyles,
+            }).addTo(map3);
+            
+            L.polyline([[20, 140],[40, 140]], {color: "black", weight: 0.5,}).addTo(map3);
+            //L.polyline([[20, 142],[40, 142]], {color: "black", weight: 0.5, }).addTo(map3);
+            L.polyline([[24, 132],[24, 145]], {color: "black", weight: 0.5, }).addTo(map3);
+            L.polyline([[28, 132],[28, 145]], {color: "black", weight: 0.5, }).addTo(map3);
+            L.polyline([[32, 132],[32, 145]], {color: "black", weight: 0.5, }).addTo(map3);
+
+            // コードとレベル対応
+            let codeParam = {
+                // lv: レベル相当…ソート順, icon: アイコンURL
+                "11": { lv: 1 }, //	レベル１（活火山であることに留意）
+                "12": { lv: 2 }, //	レベル２（火口周辺規制）
+                "13": { lv: 3 }, //	レベル３（入山規制）
+                "14": { lv: 4 }, //	レベル４（高齢者等避難）
+                "15": { lv: 5 }, //	レベル５（避難）
+                // レベル対象外火山
+                "21": { lv: 1, }, // 活火山であることに留意	
+                "22": { lv: 2, }, // 火口周辺危険	
+                "23": { lv: 3, }, // 入山危険	
+                "24": { lv: 4, }, // 山麓厳重警戒	
+                "25": { lv: 5, }, // 居住地域厳重警戒	
+                // 海上警報
+                "31": { lv: 3, }, // 海上警報（噴火警報）	
+                "32": { lv: 1, }, // 海上警報（噴火警報解除）	
+                "33": { lv: 1, }, // 海上予報（噴火予報）	
+                // 海底火山
+                "35": { lv: 1, }, // 活火山であることに留意（海底火山）	
+                "36": { lv: 3, }, // 周辺海域警戒	
+
+                "41": { lv: 2 }, // 噴火警報：避難等	
+                "42": { lv: 3 }, //	噴火警報：入山規制等	
+                "43": { lv: 4 }, //	火口周辺警報：入山規制等	
+                "44": { lv: 5 }, //	噴火警報（周辺海域）：周辺海域警戒	
+                "45": { lv: 1 }, //	活火山であることに留意	
+                "46": { lv: 4 }, //	噴火警報：当該居住地域厳重警戒	
+                "47": { lv: 3 }, //	噴火警報：当該山麓厳重警戒	噴火警報（山麓）の場合、46に代えて使用する。
+                "48": { lv: 2 }, //	噴火警報：火口周辺警戒	
+                "49": { lv: 2 }, //	火口周辺警報：火口周辺警戒	
+            };
+            // アイコンとレベル対応
+            let iconParam = {
+                // 海底火山
+                sea: {
+                    "1": L.icon({ iconUrl: "./sea1.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "2": L.icon({ iconUrl: "./sea2.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "3": L.icon({ iconUrl: "./sea3.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "4": L.icon({ iconUrl: "./sea4.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "5": L.icon({ iconUrl: "./sea5.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                },
+                // レベル導入
+                lv: {
+                    "1": L.icon({ iconUrl: "https://www.jma.go.jp/bosai/volcano/image/1.svg", iconSize: [16, 16], iconAnchor: [8, 8] }),
+                    "2": L.icon({ iconUrl: "https://www.jma.go.jp/bosai/volcano/image/2.svg", iconSize: [16, 16], iconAnchor: [8, 8] }),
+                    "3": L.icon({ iconUrl: "https://www.jma.go.jp/bosai/volcano/image/3.svg", iconSize: [16, 16], iconAnchor: [8, 8] }),
+                    "4": L.icon({ iconUrl: "https://www.jma.go.jp/bosai/volcano/image/4.svg", iconSize: [16, 16], iconAnchor: [8, 8] }),
+                    "5": L.icon({ iconUrl: "https://www.jma.go.jp/bosai/volcano/image/5.svg", iconSize: [16, 16], iconAnchor: [8, 8] }),
+                },
+                // レベル未導入
+                noLv: {
+                    "1": L.icon({ iconUrl: "./noLv1.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "2": L.icon({ iconUrl: "./noLv2.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "3": L.icon({ iconUrl: "./noLv3.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "4": L.icon({ iconUrl: "./noLv4.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "5": L.icon({ iconUrl: "./noLv5.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                },
+            };
+
+            // 火山表示用パラメータ codeをkeyにして格納
+            let volParam = {};
+            // 情報 codeをkeyにして格納
+            let reports = {};
+            // 警報ページのリスト 多言語対応HPより
+            fetch("https://www.data.jma.go.jp/multi/data/VFVO50/jp.json").then(res => res.json()).then(data => {
+                data.report.forEach(r => {
+                    let volCode = r.volcanoInfo.area.code;
+                    let infoCode = r.volcanoInfo.kind.code;
+                    reports[volCode] = infoCode;
+                });
+                // 火山リスト
+                fetch("./volcano_list.json").then(response => response.json()).then(data => {
+                    // 緯度経度のないものをフィルタ
+                    let list = data.filter((d) => d.latlon);
+                    // 緯度順でソートしてから描画 南側が上になるように
+                    list.sort((a, b) => b.latlon[0] - a.latlon[0]);
+                    list.forEach(vol => {
+                        if (!vol.latlon) {
+                            return;
+                        }
+                        
+                        volParam[vol.code] = {
+                            latlon: [+vol.latlon[0], +vol.latlon[1]],
+                            name: vol.name_jp,
+                            posX: vol.posX,
+                            posY: vol.posY,
+                            dfX: vol.dfX ?? 0,
+                            dfY: vol.dfY ?? 0,
+                        };
+
+                        // とりあえず子の場合表示しないことにする TODO: レベル合計、子モード・親モード
+                        if (vol.isChild) {
+                            return;
+                        }
+
+                        // コードからアイコンを引く
+                        let lv = codeParam[reports[vol.code]]?.lv ?? 1;
+                        // レベル導入かどうかで分岐
+                        let icon = iconParam.noLv[lv];
+                        if (vol.levelOperation) {
+                            icon = iconParam.lv[lv];
+                        } else if (vol.sea) { // 海底火山かどうか
+                            icon = iconParam.sea[lv];
+                        } else {
+                            icon = iconParam.noLv[lv];
+                        }
+                        function calcText(px) {
+                            if (!px) {
+                                return `-50%`;
+                            }
+                            if (px < 0) {
+                                return `calc(-50% - ${-px}px)`;
+                            }
+                            return `calc(-50% + ${px}px)`; 
+                        }
+                        function barText(x, y, dfX = 0, dfY = 0) {
+                            // 距離
+                            let len = Math.hypot(x + dfX, y + dfY);
+                            // 角度 X軸からの角度[rad]
+                            let angle = Math.atan2(y + dfY, x + dfX);
+                            return `<div class="bar" style="transform: rotate(${angle}rad); width: ${len}px;"></div>`;
+                        }
+                        let labelIcon = L.divIcon({
+                            className: "divicon lv" + lv,
+                            html: `${barText(vol.posX, vol.posY, vol.dfX, vol.dfY)}<div class="label" style="transform: translate(${calcText(vol.posX)}, ${calcText(vol.posY)});">${vol.name_jp}</div>`,
+                            iconSize: null,
+                        });
+
+                        // メイン領域への描画
+                        if (vol.map[0]) {
+                            L.marker( volParam[vol.code].latlon, { icon: labelIcon } ).addTo(map1);
+                            L.marker( volParam[vol.code].latlon, { icon } ).addTo(map1);
+                        }
+                        // 南西諸島領域への描画
+                        if (vol.map[1]) {
+                            L.marker( volParam[vol.code].latlon, { icon: labelIcon } ).addTo(map2);
+                            L.marker( volParam[vol.code].latlon, { icon } ).addTo(map2);
+                        }
+                        // 小笠原諸島領域への描画
+                        if (vol.map[2]) {
+                            L.marker( volParam[vol.code].latlon, { icon: labelIcon } ).addTo(map3);
+                            L.marker( volParam[vol.code].latlon, { icon } ).addTo(map3);
+                        }
+                    });
+                });
+            });
+            
+
+        </script>
+    </body>
+
+</html>
