@@ -3,10 +3,12 @@
 
 <head>
     <meta charset="utf-8">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.vectorgrid@latest/dist/Leaflet.VectorGrid.bundled.js"></script>
     <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
+    <script src='https://cdn.plot.ly/plotly-3.0.1.min.js'></script>
     <style>
         .label {
             text-wrap: nowrap;
@@ -68,8 +70,27 @@
             <div id="map2" style="position:absolute;top:0;left:0;width: 400px; height: 300px;border: 1px solid black;background-color: white;margin: 0;padding: 0;"></div>
             <div id="map3" style="position:absolute;right:0; bottom:0; width: 300px; height: 500px; border: 1px solid black;background-color: white;margin: 0;padding: 0;"></div>
         </div>
-        
+        <div id='lvGraph'></div>
         <script>
+            const { createApp, ref } = Vue
+            // 位置調整用のcalc文字列を生成
+            function calcText(px) {
+                if (!px) {
+                    return `-50%`;
+                }
+                if (px < 0) {
+                    return `calc(-50% - ${-px}px)`;
+                }
+                return `calc(-50% + ${px}px)`; 
+            }
+            // 引き出し線のhtmlを生成
+            function barText(x, y, dfX = 0, dfY = 0) {
+                // 距離
+                let len = Math.hypot(x + dfX, y + dfY);
+                // 角度 X軸からの角度[rad]
+                let angle = Math.atan2(y + dfY, x + dfX);
+                return `<div class="bar" style="transform: rotate(${angle}rad); width: ${len}px;"></div>`;
+            }
             // メイン日本列島
             let map1 = L.map("map1", {
                 zoom: 6,
@@ -196,27 +217,27 @@
             let iconParam = {
                 // 海底火山
                 sea: {
-                    "1": L.icon({ iconUrl: "./sea1.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
-                    "2": L.icon({ iconUrl: "./sea2.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
-                    "3": L.icon({ iconUrl: "./sea3.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
-                    "4": L.icon({ iconUrl: "./sea4.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
-                    "5": L.icon({ iconUrl: "./sea5.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "1": L.icon({ iconUrl: "./img/sea1.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "2": L.icon({ iconUrl: "./img/sea2.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "3": L.icon({ iconUrl: "./img/sea3.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "4": L.icon({ iconUrl: "./img/sea4.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "5": L.icon({ iconUrl: "./img/sea5.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
                 },
                 // レベル導入
                 lv: {
-                    "1": L.icon({ iconUrl: "https://www.jma.go.jp/bosai/volcano/image/1.svg", iconSize: [16, 16], iconAnchor: [8, 8] }),
-                    "2": L.icon({ iconUrl: "https://www.jma.go.jp/bosai/volcano/image/2.svg", iconSize: [16, 16], iconAnchor: [8, 8] }),
-                    "3": L.icon({ iconUrl: "https://www.jma.go.jp/bosai/volcano/image/3.svg", iconSize: [16, 16], iconAnchor: [8, 8] }),
-                    "4": L.icon({ iconUrl: "https://www.jma.go.jp/bosai/volcano/image/4.svg", iconSize: [16, 16], iconAnchor: [8, 8] }),
-                    "5": L.icon({ iconUrl: "https://www.jma.go.jp/bosai/volcano/image/5.svg", iconSize: [16, 16], iconAnchor: [8, 8] }),
+                    "1": L.icon({ iconUrl: "./img/lv1.svg", iconSize: [16, 16], iconAnchor: [8, 8] }),
+                    "2": L.icon({ iconUrl: "./img/lv2.svg", iconSize: [16, 16], iconAnchor: [8, 8] }),
+                    "3": L.icon({ iconUrl: "./img/lv3.svg", iconSize: [16, 16], iconAnchor: [8, 8] }),
+                    "4": L.icon({ iconUrl: "./img/lv4.svg", iconSize: [16, 16], iconAnchor: [8, 8] }),
+                    "5": L.icon({ iconUrl: "./img/lv5.svg", iconSize: [16, 16], iconAnchor: [8, 8] }),
                 },
                 // レベル未導入
                 noLv: {
-                    "1": L.icon({ iconUrl: "./noLv1.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
-                    "2": L.icon({ iconUrl: "./noLv2.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
-                    "3": L.icon({ iconUrl: "./noLv3.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
-                    "4": L.icon({ iconUrl: "./noLv4.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
-                    "5": L.icon({ iconUrl: "./noLv5.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "1": L.icon({ iconUrl: "./img/noLv1.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "2": L.icon({ iconUrl: "./img/noLv2.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "3": L.icon({ iconUrl: "./img/noLv3.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "4": L.icon({ iconUrl: "./img/noLv4.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
+                    "5": L.icon({ iconUrl: "./img/noLv5.svg", iconSize: [16, 16], iconAnchor: [8, 8]}),
                 },
             };
 
@@ -267,22 +288,7 @@
                         } else {
                             icon = iconParam.noLv[lv];
                         }
-                        function calcText(px) {
-                            if (!px) {
-                                return `-50%`;
-                            }
-                            if (px < 0) {
-                                return `calc(-50% - ${-px}px)`;
-                            }
-                            return `calc(-50% + ${px}px)`; 
-                        }
-                        function barText(x, y, dfX = 0, dfY = 0) {
-                            // 距離
-                            let len = Math.hypot(x + dfX, y + dfY);
-                            // 角度 X軸からの角度[rad]
-                            let angle = Math.atan2(y + dfY, x + dfX);
-                            return `<div class="bar" style="transform: rotate(${angle}rad); width: ${len}px;"></div>`;
-                        }
+
                         let labelIcon = L.divIcon({
                             className: "divicon lv" + lv,
                             html: `${barText(vol.posX, vol.posY, vol.dfX, vol.dfY)}<div class="label" style="transform: translate(${calcText(vol.posX)}, ${calcText(vol.posY)});">${vol.name_jp}</div>`,
@@ -291,23 +297,80 @@
 
                         // メイン領域への描画
                         if (vol.map[0]) {
-                            L.marker( volParam[vol.code].latlon, { icon: labelIcon } ).addTo(map1);
-                            L.marker( volParam[vol.code].latlon, { icon } ).addTo(map1);
+                            L.marker( volParam[vol.code].latlon, { icon: labelIcon } ).addTo(map1).on( 'click', () => { loadLvHistory(vol.code); });
+                            L.marker( volParam[vol.code].latlon, { icon } ).addTo(map1).on( 'click', () => { loadLvHistory(vol.code); });
                         }
                         // 南西諸島領域への描画
                         if (vol.map[1]) {
-                            L.marker( volParam[vol.code].latlon, { icon: labelIcon } ).addTo(map2);
-                            L.marker( volParam[vol.code].latlon, { icon } ).addTo(map2);
+                            L.marker( volParam[vol.code].latlon, { icon: labelIcon } ).addTo(map2).on( 'click', () => { loadLvHistory(vol.code); });
+                            L.marker( volParam[vol.code].latlon, { icon } ).addTo(map2).on( 'click', () => { loadLvHistory(vol.code); });
                         }
                         // 小笠原諸島領域への描画
                         if (vol.map[2]) {
-                            L.marker( volParam[vol.code].latlon, { icon: labelIcon } ).addTo(map3);
-                            L.marker( volParam[vol.code].latlon, { icon } ).addTo(map3);
+                            L.marker( volParam[vol.code].latlon, { icon: labelIcon } ).addTo(map3).on( 'click', () => { loadLvHistory(vol.code); });
+                            L.marker( volParam[vol.code].latlon, { icon } ).addTo(map3).on( 'click', () => { loadLvHistory(vol.code); });
                         }
                     });
                 });
             });
+
+            /**
+             * 火山コードを元に火山レベルの履歴をとる。HPから。
+             */
+            function loadLvHistory(code) {
+                let dataArray = [];
+                fetch(`https://www.data.jma.go.jp/vois/data/report/volinfo/volinfo.php?info=VJ&id=${code}`).then(res => res.text()).then(text => {
+                    let urls = text.matchAll(/VJ.+.html/g);
+                    // 全てロードし終わったら描画する。失敗しても。
+                    Promise.allSettled(urls.map(url => {
+                        // URL先を読み込み、最初に出てくる"噴火警戒レベル[１-５]"の文字列を元に判断（ホント？）
+                        return new Promise((resolve) => {
+                            fetch(`https://www.data.jma.go.jp/vois/data/report/volinfo/${url[0]}`).then(res => res.text()).then(text => {
+                                let match = text.match(/噴火警戒レベル([１-５])/g);
+                                if (match[0]) {
+                                    // "VJyyyymmddhhmmss_xxx.html"のURLから時刻をパースする(JST)
+                                    let d = url[0].substr(2,14);
+                                    // 全角から半角に変えて格納
+                                    dataArray.push([d, +String.fromCharCode(match[0].at(-1).charCodeAt(0) - 0xFEE0)]);
+                                } else {
+                                    // ない場合はlogだけ吐いておく
+                                    console.log("no match",url[0]);
+                                }
+                                resolve();
+                            });
+                        });
+                    })).then(() => {
+                        // 時間でソートする
+                        dataArray.sort((a, b) => a[0] - b[0]);
+                        // 最後に現在時刻で同じ値を入れておく
+                        dataArray.push([
+                            "2025-05-01 00:00:00",
+                            dataArray.at(-1)[1],
+                        ]);
+                        let data = [
+                            {
+                                x: dataArray.map((a) => `${a[0].substr(0,4)}-${a[0].substr(4,2)}-${a[0].substr(6,2)} ${a[0].substr(8,2)}:${a[0].substr(10,2)}:${a[0].substr(12,2)}`),
+                                y: dataArray.map((a) => a[1]),
+                                type: 'scatter',
+                                line: {shape: 'hv'},
+                            }
+                        ];
+                        console.log(data);
+                        Plotly.newPlot('lvGraph', data, {
+                            xaxis: {
+                                range: ["2007-01-01", "2025-05-01"],
+                            },
+                            yaxis: {
+                                range: [0.5, 5.5],
+                            }
+                        });
+                    });
+                    
+                });
+
+            }
             
+            // loadLvHistory("509");
 
         </script>
     </body>
