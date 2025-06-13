@@ -8,7 +8,8 @@
     <script src="https://unpkg.com/leaflet@1.9/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.vectorgrid@latest/dist/Leaflet.VectorGrid.bundled.js"></script>
     <script src="https://unpkg.com/leaflet-rotate@0.2.8/dist/leaflet-rotate-src.js"></script>
-    <script src='https://cdn.plot.ly/plotly-3.0.1.min.js'></script>
+    <script src="https://cdn.plot.ly/plotly-3.0.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.6.1/build/global/luxon.min.js"></script>
     <style>
         .label {
             text-wrap: nowrap;
@@ -70,9 +71,25 @@
             <div id="map2" style="position:absolute;top:0;left:0;width: 400px; height: 300px;border: 1px solid black;background-color: white;margin: 0;padding: 0;"></div>
             <div id="map3" style="position:absolute;right:0; bottom:0; width: 300px; height: 500px; border: 1px solid black;background-color: white;margin: 0;padding: 0;"></div>
         </div>
-        <div id='lvGraph'></div>
+        <div id="volInfo">
+            #{{ code }} {{ volParam[code]?.name }}
+        </div>
+        <div id="lvGraph"></div>
         <script>
-            const { createApp, ref } = Vue
+            let volParam = {};
+            const { createApp, ref, reactive } = Vue;
+            // 火山表示部分だけvueに任せちゃう
+            let app = createApp({
+                setup() {
+                    return {
+                        // 表示対象のコード
+                        code: ref(0),
+                        // 火山表示用パラメータ codeをkeyにして格納
+                        volList: reactive([]),
+                        volParam: volParam,
+                    }
+                },
+            }).mount('#volInfo');
             // 位置調整用のcalc文字列を生成
             function calcText(px) {
                 if (!px) {
@@ -153,28 +170,30 @@
                 "label": [],
                 "symbol": [],
             };
-
+            // ベクターマップタイル設定
+            // メイン領域
             L.vectorGrid.protobuf("https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf", {
                 attribution: false,
                 rendererFactory: L.canvas.tile,
                 vectorTileLayerStyles,
             }).addTo(map1);
-            
+            // 南西諸島
             L.vectorGrid.protobuf("https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf", {
                 attribution: false, // "<a href='https://github.com/gsi-cyberjapan/gsimaps-vector-experiment' target='_blank'>地理院地図Vector（仮称）提供実験</a>",
                 rendererFactory: L.canvas.tile,
                 vectorTileLayerStyles,
             }).addTo(map2);
-
+            // 緯度経度補助線
             L.polyline([[20, 126],[40, 126]], {color: "black", weight: 0.5,}).addTo(map2);
             L.polyline([[28, 120],[28, 135]], {color: "black", weight: 0.5, }).addTo(map2);
-            
+
+            // 伊豆小笠原
             L.vectorGrid.protobuf("https://cyberjapandata.gsi.go.jp/xyz/experimental_bvmap/{z}/{x}/{y}.pbf", {
                 attribution: false, // "<a href='https://github.com/gsi-cyberjapan/gsimaps-vector-experiment' target='_blank'>地理院地図Vector（仮称）提供実験</a>",
                 rendererFactory: L.canvas.tile,
                 vectorTileLayerStyles,
             }).addTo(map3);
-            
+            // 緯度経度補助線
             L.polyline([[20, 140],[40, 140]], {color: "black", weight: 0.5,}).addTo(map3);
             //L.polyline([[20, 142],[40, 142]], {color: "black", weight: 0.5, }).addTo(map3);
             L.polyline([[24, 132],[24, 145]], {color: "black", weight: 0.5, }).addTo(map3);
@@ -203,14 +222,14 @@
                 "35": { lv: 1, }, // 活火山であることに留意（海底火山）	
                 "36": { lv: 3, }, // 周辺海域警戒	
 
-                "41": { lv: 2 }, // 噴火警報：避難等	
+                "41": { lv: 4 }, // 噴火警報：避難等	
                 "42": { lv: 3 }, //	噴火警報：入山規制等	
                 "43": { lv: 4 }, //	火口周辺警報：入山規制等	
-                "44": { lv: 5 }, //	噴火警報（周辺海域）：周辺海域警戒	
+                "44": { lv: 3 }, //	噴火警報（周辺海域）：周辺海域警戒	
                 "45": { lv: 1 }, //	活火山であることに留意	
-                "46": { lv: 4 }, //	噴火警報：当該居住地域厳重警戒	
-                "47": { lv: 3 }, //	噴火警報：当該山麓厳重警戒	噴火警報（山麓）の場合、46に代えて使用する。
-                "48": { lv: 2 }, //	噴火警報：火口周辺警戒	
+                "46": { lv: 5 }, //	噴火警報：当該居住地域厳重警戒	
+                "47": { lv: 4 }, //	噴火警報：当該山麓厳重警戒	噴火警報（山麓）の場合、46に代えて使用する。
+                "48": { lv: 3 }, //	噴火警報：火口周辺警戒	
                 "49": { lv: 2 }, //	火口周辺警報：火口周辺警戒	
             };
             // アイコンとレベル対応
@@ -241,83 +260,107 @@
                 },
             };
 
-            // 火山表示用パラメータ codeをkeyにして格納
-            let volParam = {};
             // 情報 codeをkeyにして格納
             let reports = {};
-            // 警報ページのリスト 多言語対応HPより
-            fetch("https://www.data.jma.go.jp/multi/data/VFVO50/jp.json").then(res => res.json()).then(data => {
-                data.report.forEach(r => {
+            async function load() {
+                let volJson = await fetch("./volcano_list.json").then(response => response.json());
+                console.log(volJson);
+                // 緯度経度のないものをフィルタ
+                let list = volJson.filter((d) => d.latlon);
+                // 緯度順でソートしてから描画 南側が上になるように TODO: レベルの高いものを上に
+                list.sort((a, b) => b.latlon[0] - a.latlon[0]);
+                list.forEach(vol => {
+                    if (!vol.latlon) {
+                        return;
+                    }
+                    volParam[vol.code] = {
+                        latlon: [+vol.latlon?.[0], +vol.latlon?.[1]],
+                        name: vol.name_jp,
+                        posX: vol.posX,
+                        posY: vol.posY,
+                        dfX: vol.dfX ?? 0,
+                        dfY: vol.dfY ?? 0,
+                        lv: 0,
+                        map: vol.map,
+                        parent: vol.parent,
+                    };
+                });
+                app.volList.push(...list);
+                console.log(app.volList)
+                
+                // 警報ページのリスト 多言語対応HPより
+                // ロード同期で待つ
+                let res = await fetch("https://www.data.jma.go.jp/multi/data/VFVO50/jp.json").then(res => res.json());
+                res.report.forEach(r => {
                     let volCode = r.volcanoInfo.area.code;
                     let infoCode = r.volcanoInfo.kind.code;
                     reports[volCode] = infoCode;
+
+                    let vol = volParam[volCode];
+
+                    // レベル数字
+                    let lv =  codeParam[infoCode]?.lv || 1;
+                    vol.lv = lv;
+                    let plotCode = volCode;
+                    // 子の場合、親の設定に追記する
+                        console.log(vol, vol.isChild)
+                    if (vol.parent) {
+                        plotCode = vol.parent;
+                        // 最大の値に更新
+                        volParam[plotCode].lv = Math.max(volParam[plotCode].lv, lv);
+                    }
+                    lv = volParam[plotCode].lv;
+
                 });
-                // 火山リスト
-                fetch("./volcano_list.json").then(response => response.json()).then(data => {
-                    // 緯度経度のないものをフィルタ
-                    let list = data.filter((d) => d.latlon);
-                    // 緯度順でソートしてから描画 南側が上になるように
-                    list.sort((a, b) => b.latlon[0] - a.latlon[0]);
-                    list.forEach(vol => {
-                        if (!vol.latlon) {
-                            return;
-                        }
-                        
-                        volParam[vol.code] = {
-                            latlon: [+vol.latlon[0], +vol.latlon[1]],
-                            name: vol.name_jp,
-                            posX: vol.posX,
-                            posY: vol.posY,
-                            dfX: vol.dfX ?? 0,
-                            dfY: vol.dfY ?? 0,
-                        };
 
-                        // とりあえず子の場合表示しないことにする TODO: レベル合計、子モード・親モード
-                        if (vol.isChild) {
-                            return;
-                        }
+                // 全点プロット
+                app.volList.forEach(vol => {
+                    // 親がいれば
+                    if (vol.parent) {
+                        return;
+                    }
+                    let lv = volParam[vol.code].lv || 1;
+                    // コードからアイコンを引く
+                    // レベル導入かどうかで分岐
+                    let icon = iconParam.noLv[lv];
+                    if (vol.levelOperation) {
+                        icon = iconParam.lv[lv];
+                    } else if (vol.sea) { // 海底火山かどうか
+                        icon = iconParam.sea[lv];
+                    }
 
-                        // コードからアイコンを引く
-                        let lv = codeParam[reports[vol.code]]?.lv ?? 1;
-                        // レベル導入かどうかで分岐
-                        let icon = iconParam.noLv[lv];
-                        if (vol.levelOperation) {
-                            icon = iconParam.lv[lv];
-                        } else if (vol.sea) { // 海底火山かどうか
-                            icon = iconParam.sea[lv];
-                        } else {
-                            icon = iconParam.noLv[lv];
-                        }
-
-                        let labelIcon = L.divIcon({
-                            className: "divicon lv" + lv,
-                            html: `${barText(vol.posX, vol.posY, vol.dfX, vol.dfY)}<div class="label" style="transform: translate(${calcText(vol.posX)}, ${calcText(vol.posY)});">${vol.name_jp}</div>`,
-                            iconSize: null,
-                        });
-
-                        // メイン領域への描画
-                        if (vol.map[0]) {
-                            L.marker( volParam[vol.code].latlon, { icon: labelIcon } ).addTo(map1).on( 'click', () => { loadLvHistory(vol.code); });
-                            L.marker( volParam[vol.code].latlon, { icon } ).addTo(map1).on( 'click', () => { loadLvHistory(vol.code); });
-                        }
-                        // 南西諸島領域への描画
-                        if (vol.map[1]) {
-                            L.marker( volParam[vol.code].latlon, { icon: labelIcon } ).addTo(map2).on( 'click', () => { loadLvHistory(vol.code); });
-                            L.marker( volParam[vol.code].latlon, { icon } ).addTo(map2).on( 'click', () => { loadLvHistory(vol.code); });
-                        }
-                        // 小笠原諸島領域への描画
-                        if (vol.map[2]) {
-                            L.marker( volParam[vol.code].latlon, { icon: labelIcon } ).addTo(map3).on( 'click', () => { loadLvHistory(vol.code); });
-                            L.marker( volParam[vol.code].latlon, { icon } ).addTo(map3).on( 'click', () => { loadLvHistory(vol.code); });
-                        }
+                    let labelIcon = L.divIcon({
+                        className: "divicon lv" + lv,
+                        html: `${barText(vol.posX, vol.posY, vol.dfX, vol.dfY)}<div class="label" style="transform: translate(${calcText(vol.posX)}, ${calcText(vol.posY)});">${vol.name_jp}</div>`,
+                        iconSize: null,
                     });
-                });
-            });
+                    //console.log(vol, icon, labelIcon, lv)
+                    // メイン領域への描画
+                    if (vol.map[0]) {
+                        L.marker( vol.latlon, { icon: labelIcon } ).addTo(map1).on( 'click', (e) => { loadLvHistory(vol.code); L.DomEvent.stopPropagation(e)});
+                        L.marker( vol.latlon, { icon } ).addTo(map1).on( 'click',(e) => { loadLvHistory(vol.code); L.DomEvent.stopPropagation(e)});
+                    }
+                    // 南西諸島領域への描画
+                    if (vol.map[1]) {
+                        L.marker( vol.latlon, { icon: labelIcon } ).addTo(map2).on( 'click', (e) => { loadLvHistory(vol.code); L.DomEvent.stopPropagation(e)});
+                        L.marker( vol.latlon, { icon } ).addTo(map2).on( 'click', (e) => { loadLvHistory(vol.code); L.DomEvent.stopPropagation(e)});
+                    }
+                    // 小笠原諸島領域への描画
+                    if (vol.map[2]) {
+                        L.marker( vol.latlon, { icon: labelIcon } ).addTo(map3).on( 'click', (e) => { loadLvHistory(vol.code); L.DomEvent.stopPropagation(e)});
+                        L.marker( vol.latlon, { icon } ).addTo(map3).on( 'click', (e) => { loadLvHistory(vol.code); L.DomEvent.stopPropagation(e)});
+                    }
 
+                });
+
+            }
+
+            
             /**
              * 火山コードを元に火山レベルの履歴をとる。HPから。
              */
             function loadLvHistory(code) {
+                app.code = code;
                 let dataArray = [];
                 fetch(`https://www.data.jma.go.jp/vois/data/report/volinfo/volinfo.php?info=VJ&id=${code}`).then(res => res.text()).then(text => {
                     let urls = text.matchAll(/VJ.+.html/g);
@@ -327,7 +370,7 @@
                         return new Promise((resolve) => {
                             fetch(`https://www.data.jma.go.jp/vois/data/report/volinfo/${url[0]}`).then(res => res.text()).then(text => {
                                 let match = text.match(/噴火警戒レベル([１-５])/g);
-                                if (match[0]) {
+                                if (match?.[0]) {
                                     // "VJyyyymmddhhmmss_xxx.html"のURLから時刻をパースする(JST)
                                     let d = url[0].substr(2,14);
                                     // 全角から半角に変えて格納
@@ -342,23 +385,25 @@
                     })).then(() => {
                         // 時間でソートする
                         dataArray.sort((a, b) => a[0] - b[0]);
-                        // 最後に現在時刻で同じ値を入れておく
-                        dataArray.push([
-                            "2025-05-01 00:00:00",
-                            dataArray.at(-1)[1],
-                        ]);
+                        
                         let data = [
                             {
                                 x: dataArray.map((a) => `${a[0].substr(0,4)}-${a[0].substr(4,2)}-${a[0].substr(6,2)} ${a[0].substr(8,2)}:${a[0].substr(10,2)}:${a[0].substr(12,2)}`),
                                 y: dataArray.map((a) => a[1]),
                                 type: 'scatter',
-                                line: {shape: 'hv'},
+                                line: { shape: 'hv', width: 3, color: 'black' },
+                                marker: { size: 10, color: 'black' },
                             }
                         ];
+                        // 最後に現在時刻で同じ値を入れておく
+                        let d = luxon.DateTime.now().toFormat('yyyy-MM-dd HH:mm:ss');
+                        data[0].x.push(new Date());
+                        data[0].y.push(data[0].y.at(-1));
                         console.log(data);
+
                         Plotly.newPlot('lvGraph', data, {
                             xaxis: {
-                                range: ["2007-01-01", "2025-05-01"],
+                                range: ["2007-01-01 00:00:00", d],
                             },
                             yaxis: {
                                 range: [0.5, 5.5],
@@ -369,9 +414,9 @@
                 });
 
             }
-            
-            // loadLvHistory("509");
 
+            load();
+            
         </script>
     </body>
 
